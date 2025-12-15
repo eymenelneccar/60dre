@@ -14,9 +14,7 @@ exports.handler = async (event) => {
   const repo = process.env.GITHUB_REPO || '';
   const branch = process.env.GITHUB_BRANCH || 'main';
   const token = process.env.GITHUB_TOKEN || '';
-  if (!owner || !repo || !branch || !token) {
-    return { statusCode: 500, headers: cors, body: JSON.stringify({ ok:false, error:'missing_env', owner: !!owner, repo: !!repo, branch: !!branch, token: !!token }) };
-  }
+  const missingEnv = (!owner || !repo || !branch || !token);
   const putFile = async (key, contentBase64) => {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${key}`;
     let sha = undefined;
@@ -33,7 +31,10 @@ exports.handler = async (event) => {
   try {
     const route = routeEarly;
     if (route.includes('/config') && event.httpMethod === 'GET') {
-      return json({ ok: true, owner, repo, branch });
+      return json({ ok: true, owner, repo, branch, hasToken: !!token });
+    }
+    if (missingEnv) {
+      return { statusCode: 500, headers: cors, body: JSON.stringify({ ok:false, error:'missing_env', owner: !!owner, repo: !!repo, branch: !!branch, token: !!token }) };
     }
     if (route.includes('/upload-image') && event.httpMethod === 'POST') {
       const p = JSON.parse(bodyText || '{}');
